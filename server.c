@@ -6,7 +6,7 @@
 
 #define SERVER_NAME "localhost"
 #define SERVER_PORT "11999"
-#define PLAINTEXT "==Hello there!=="
+#define PLAINTEXT "I am the server!"
 
 static void init(mbedtls_net_context *network_listen, mbedtls_net_context *network_client,
                    mbedtls_ecdh_context *ctx, mbedtls_entropy_context *entropy,
@@ -107,7 +107,7 @@ static void send_pubkey(mbedtls_ecdh_context *ctx,mbedtls_net_context *network_c
     }
 
     length_buffer[0] = (unsigned char)(olen);
-    dump_buf("in send pubkey: length buffer: ", length_buffer, 2);
+    
     //send the length of the pubkey_buffer
     if ((ret = mbedtls_net_send(network_client, length_buffer, 2)) != 2)
     {
@@ -130,7 +130,6 @@ static void recv_pubkey(mbedtls_ecdh_context *ctx,
     if ((ret = mbedtls_net_recv(network_client, length_buffer, 2)) != 2){
         printf(" failed\n  ! mbedtls_net_recv returned %d\n\n", ret);
     }
-    printf(" ret: %d\n\n", ret);
 
     olen = length_buffer[0];
 
@@ -140,7 +139,6 @@ static void recv_pubkey(mbedtls_ecdh_context *ctx,
         printf(" failed\n  ! mbedtls_net_recv returned %d\n\n", ret);
     }
 
-    printf(" ret: %d\n\n", ret);
     ret = mbedtls_ecp_point_read_binary(&ctx->grp, &ctx->Qp, pubkey_buffer, olen);
     if (ret != 0)
     {
@@ -175,6 +173,44 @@ static void listen_and_accept(mbedtls_net_context *network_listen, mbedtls_net_c
     printf("Client connected!\n");
 }
 
+void send_message(mbedtls_net_context *network_client, mbedtls_aes_context *aes, unsigned char * shared_secret)
+{
+    int ret;
+    size_t olen;
+    unsigned char length_buffer[4];
+    unsigned char message_buffer[256];
+    unsigned long mess_size;
+    printf( "...\n  . Encrypting and sending the ciphertext" );
+    fflush( stdout );
+
+    mbedtls_aes_setkey_enc( aes, shared_secret, 192 );
+    memcpy( message_buffer, PLAINTEXT, sizeof(message_buffer));
+    mbedtls_aes_crypt_ecb( aes, MBEDTLS_AES_ENCRYPT, message_buffer, message_buffer );
+
+    mess_size = sizeof(message_buffer);
+
+    ret = mbedtls_net_send( network_client, message_buffer, sizeof(message_buffer));
+
+    dump_buf("Text: ", message_buffer, sizeof message_buffer);
+}
+
+void recv_message(mbedtls_net_context *server_fd, mbedtls_aes_context *aes, unsigned char *shared_secret){
+    int ret;
+    unsigned char mess_buffer[256];
+
+    printf( "...\n  . Receiving and decrypting the ciphertext" );
+    fflush( stdout );
+
+    mbedtls_aes_setkey_dec( aes, shared_secret, 192 );
+
+    ret = mbedtls_net_recv( server_fd, mess_buffer, sizeof(mess_buffer) );
+
+    mbedtls_aes_crypt_ecb( aes, MBEDTLS_AES_DECRYPT, mess_buffer, mess_buffer);
+    
+    printf( "\n  . Received:\"%s\"\n\n", (char *) mess_buffer );
+
+}
+
 int main()
 {
     int ret = 1; // to check result when executed function: 0 -> successful
@@ -182,7 +218,9 @@ int main()
     mbedtls_ecdh_context ctx_srv;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_aes_context aes;
     
+    mbedtls_aes_init( &aes );
     init(&network_listen, &network_client, &ctx_srv, &entropy, &ctr_drbg);
     int key_size = get_curve_bitsize(ctx_srv.grp.id);
 
@@ -199,14 +237,17 @@ int main()
     dump_point("Server's pubkey:",&ctx_srv.Q);
     dump_point("Client's pubkey: ", &ctx_srv.Qp);
 
-
-    size_t olen;
     unsigned char shared_secret[key_size / 8];
+    size_t olen;
     get_shared_secret(&ctx_srv, shared_secret, &olen, sizeof shared_secret, &ctr_drbg);
-    
     dump_buf("Shared secret: ", shared_secret, sizeof shared_secret);
-    
+
+    send_message(&network_client, &aes, &shared_secret);
+
+    recv_message(&network_client, &aes, &shared_secret);
+
     mbedtls_net_free(&network_client);
     return 1;
 }
+
 
