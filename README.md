@@ -79,6 +79,8 @@ gcc -I C:\path\to\mbedtls-2.27.0\include\ -I C:\path\to\mbedtls-2.27.0\library\ 
 ```sh
 ./client.exe
 ```
+
+* Video: https://www.youtube.com/watch?v=8D_XH5UM8lk
 <!-- CONTACT -->
 ## Credits
 
