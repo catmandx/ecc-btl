@@ -20,7 +20,7 @@ Chương trình triển khai thuật toán ECDH kèm với mã hoá AES với th
 
 Để compile chương trình cần các thành phần sau đây:
 * Thư viện MbedTLS 2.27.0: https://github.com/ARMmbed/mbedtls/releases/tag/v2.27.0
-* C file compiler: gcc, mingw, clang, v.v
+* Các chương trình liên quan tới compile: gcc, mingw, clang, v.v
 
 
 ### Compile chương trình (Linux)
@@ -54,6 +54,31 @@ gcc -I/path/to/mbed/mbedtls-2.27.0/include \
 ./client.elf
 ```
 
+### Compile chương trình (Windows x64)
+1. Tải source code của thư viện MbedTLS 2.27.0 về và compile:
+- MinGW-W64: https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe
+- Thêm đường dẫn chứa binary của MinGW vào PATH, đường dẫn này có dạng: `C:\path\to\mingw-64\mingw\bin`. Nếu làm theo bài viết bên dưới thì đường dẫn này là: `C:\mingw-64\mingw64\bin` 
+- Hướng dẫn compile thư viện bằng MinGW-W64: https://tls.mbed.org/kb/compiling-and-building/compiling-mbedtls-in-mingw
+
+2. Compile thư viện với các lệnh sau:
+* Client: 
+```sh
+gcc -I C:\path\to\mbedtls-2.27.0\include\ -I C:\path\to\mbedtls-2.27.0\library\ -L C:\path\to\mbedtls-2.27.0\library\ -g .\client.c -std=gnu99 -lmbedtls -lmbedx509 -lmbedcrypto -lws2_32 -w -o client.exe
+```
+
+* Server:
+```sh
+gcc -I C:\path\to\mbedtls-2.27.0\include\ -I C:\path\to\mbedtls-2.27.0\library\ -L C:\path\to\mbedtls-2.27.0\library\ -g .\server.c -std=gnu99 -lmbedtls -lmbedx509 -lmbedcrypto -lws2_32 -w -o server.exe
+```
+
+3. Chạy chương trình trên 2 cửa số terminal riêng biệt:
+```sh
+./server.exe
+```
+
+```sh
+./client.exe
+```
 <!-- CONTACT -->
 ## Credits
 
